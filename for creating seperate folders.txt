@@ -1,0 +1,43 @@
+import os
+import shutil
+
+# Define the source and target directories
+source_dir = r"C:\Users\Muralish\Desktop\Sapphires"
+target_dir = r"C:\Users\Muralish\Desktop\Sapphires_Cleaned"
+
+# Function to copy the cleaned folder if not already copied
+def copy_cleaned_folders():
+    # Loop through each category of sapphires
+    for category in ['Blue Sapphires', 'Pink Sapphires', 'Ruby Sapphires', 'Yellow Sapphires']:
+        category_path = os.path.join(source_dir, category)
+
+        # Check if category folder exists
+        if os.path.exists(category_path):
+            # Loop through pages 1 to 10
+            for page_num in range(1, 11):
+                page_folder = os.path.join(category_path, f"Page{page_num}")
+                
+                # Check if page folder exists
+                if os.path.exists(page_folder):
+                    # Loop through each item in the page
+                    for item_folder in os.listdir(page_folder):
+                        item_path = os.path.join(page_folder, item_folder)
+                        
+                        # Check if item folder exists and contains a 'cleaned' folder
+                        cleaned_folder_path = os.path.join(item_path, 'cleaned')
+                        if os.path.isdir(item_path) and os.path.isdir(cleaned_folder_path):
+                            
+                            # Define the target path for the cleaned folder
+                            target_item_path = os.path.join(target_dir, category, f"Page{page_num}", item_folder, 'cleaned')
+                            
+                            # Check if the cleaned folder already exists in the target location
+                            if not os.path.exists(target_item_path):
+                                # Create the necessary directories and copy the cleaned folder
+                                os.makedirs(os.path.dirname(target_item_path), exist_ok=True)
+                                shutil.copytree(cleaned_folder_path, target_item_path)
+                                print(f"Copied {cleaned_folder_path} to {target_item_path}")
+                            else:
+                                print(f"Skipped {cleaned_folder_path}, already copied.")
+
+# Run the function to copy the cleaned folders
+copy_cleaned_folders()
