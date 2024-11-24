@@ -1,0 +1,103 @@
+import os
+import csv
+import requests
+from bs4 import BeautifulSoup
+
+# Base URL and headers for requests
+base_url = "https://www.thenaturalsapphirecompany.com/purple-sapphires/?pagenum="
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+    'Accept-Language': 'en-US, en;q=0.5'
+}
+
+# CSV output file
+csv_file_path = r"C:\Users\Muralish\Desktop\Sapphires_Cleaned\Images\Purple\purple_stone_details.csv"
+
+# Define CSV headers including new details and cleaned folder link
+csv_headers = ["Item ID", "Total Price", "Weight", "Per Carat Price", "Color", "Shape", 
+               "Dimensions (mm)", "Clarity", "Cut", "Color Intensity", "Origin", 
+               "Treatments", "Additional Detail 1", "Additional Detail 2", "Cleaned Folder Link"]  # New column for cleaned folder link
+
+# Write CSV headers if file doesn't exist
+if not os.path.isfile(csv_file_path):
+    with open(csv_file_path, mode="w", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+        writer.writerow(csv_headers)
+
+# Loop through each page (adjust range as needed)
+for page_num in range(1, 11):  # Adjust the range for the number of pages you want to scrape
+    # Construct the page URL
+    page_url = f"{base_url}{page_num}"
+    print(f"Processing Page {page_num}: {page_url}")
+
+    # Request the page
+    webpage = requests.get(page_url, headers=HEADERS)
+    soup = BeautifulSoup(webpage.content, "html.parser")
+
+    # Find all product links
+    links = soup.find_all("div", attrs={'class': 'listingDetails'})
+    product_links = [link.find("a").get("href") for link in links if link.find("a")]
+
+    # Process each product on the page
+    for product_link in product_links:
+        full_url = f"https://www.thenaturalsapphirecompany.com{product_link}"
+        print("Checking Product URL:", full_url)
+
+        # Request the product page
+        new_webpage = requests.get(full_url, headers=HEADERS)
+        new_soup = BeautifulSoup(new_webpage.content, "html.parser")
+
+        # Extract details from the product page
+        try:
+            # Find the specifications table
+            specs_table = new_soup.find("table", class_="specs")
+            details = {}
+            
+            # Check if specs_table exists
+            if specs_table:
+                # Iterate through each row of the table to get the specifications
+                for row in specs_table.find_all("tr"):
+                    header = row.find("th")
+                    data = row.find("td")
+                    if header and data:
+                        spec_name = header.get_text(strip=True)
+                        spec_value = data.get_text(strip=True)
+                        details[spec_name] = spec_value
+
+            # Extract additional details (example, replace with actual details you want)
+            additional_detail_1 = new_soup.find("div", class_="additionalDetailClass1")  # Adjust class name
+            additional_detail_2 = new_soup.find("div", class_="additionalDetailClass2")  # Adjust class name
+
+            # Define the cleaned folder link (structure: page{page_number}\{item_id}\cleaned)
+            cleaned_folder_link = f"C:/Users/Muralish/Desktop/Sapphires_Cleaned/Images/Purple/page_{page_num}/item_{details.get('Item ID:', 'Unknown')}"
+
+            # Ensure the cleaned folder exists (this can be used to create folders dynamically if needed)
+            if not os.path.exists(cleaned_folder_link):
+                os.makedirs(cleaned_folder_link)  # This creates the folder if it doesn't exist
+
+            # Write details to CSV
+            with open(csv_file_path, mode="a", newline="", encoding="utf-8") as file:
+                writer = csv.writer(file)
+                writer.writerow([  # Write the details in the same order as csv_headers
+                    details.get("Item ID:", ""),
+                    details.get("Total Price:", ""),
+                    details.get("Weight:", ""),
+                    details.get("Per Carat Price:", ""),
+                    details.get("Color:", ""),
+                    details.get("Shape:", ""),
+                    details.get("Dimensions (mm):", ""),
+                    details.get("Clarity:", ""),
+                    details.get("Cut:", ""),
+                    details.get("Color Intensity:", ""),
+                    details.get("Origin:", ""),
+                    details.get("Treatments:", ""),
+                    additional_detail_1.get_text(strip=True) if additional_detail_1 else "",  # New detail
+                    additional_detail_2.get_text(strip=True) if additional_detail_2 else "",  # New detail
+                    cleaned_folder_link  # New column with cleaned folder link
+                ])
+                print(f"Recorded details for Item ID: {details.get('Item ID:', '')} and linked to cleaned folder.")
+
+        except Exception as e:
+            print(f"Error processing {full_url}: {e}")
+
+print("All pages processed and details recorded in CSV.")
